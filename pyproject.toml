@@ -1,4 +1,4 @@
-﻿[project]
+[project]
 name = "support-ticket-env"
 version = "1.0.0"
 description = "OpenEnv environment for customer support ticket resolution"
