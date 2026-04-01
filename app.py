@@ -14,7 +14,7 @@ from __future__ import annotations
 import os
 from typing import Any, Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -47,8 +47,11 @@ _env = SupportTicketEnv()
 # ── Request schemas ────────────────────────────────────────────────────────
 
 class ResetRequest(BaseModel):
-    task_id: str = "task_classify"
+    task_id: Optional[str] = "task_classify"
     seed: Optional[int] = None
+
+    class Config:
+        extra = "allow"
 
 
 class StepRequest(BaseModel):
@@ -57,6 +60,9 @@ class StepRequest(BaseModel):
     assigned_department: Optional[str] = None
     resolution_draft: Optional[str] = None
     reasoning: Optional[str] = None
+
+    class Config:
+        extra = "allow"
 
 
 # ── Routes ─────────────────────────────────────────────────────────────────
@@ -95,25 +101,39 @@ def list_tasks():
 
 
 @app.post("/reset", response_model=dict)
-def reset(req: ResetRequest):
+async def reset(request: Request):
+    # Accept empty body or JSON body
     try:
-        task_id = TaskID(req.task_id)
+        body = await request.json()
+    except Exception:
+        body = {}
+
+    task_id_str = body.get("task_id", "task_classify") or "task_classify"
+    seed = body.get("seed", None)
+
+    try:
+        task_id = TaskID(task_id_str)
     except ValueError:
-        raise HTTPException(400, f"Unknown task_id '{req.task_id}'. "
+        raise HTTPException(400, f"Unknown task_id '{task_id_str}'. "
                                  f"Valid: {[t.value for t in TaskID]}")
-    obs = _env.reset(task_id=task_id, seed=req.seed)
+    obs = _env.reset(task_id=task_id, seed=seed)
     return obs.model_dump()
 
 
 @app.post("/step", response_model=dict)
-def step(req: StepRequest):
+async def step(request: Request):
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+
     try:
         action = TicketAction(
-            category=Category(req.category) if req.category else None,
-            priority=Priority(req.priority) if req.priority else None,
-            assigned_department=Department(req.assigned_department) if req.assigned_department else None,
-            resolution_draft=req.resolution_draft,
-            reasoning=req.reasoning,
+            category=Category(body["category"]) if body.get("category") else None,
+            priority=Priority(body["priority"]) if body.get("priority") else None,
+            assigned_department=Department(body["assigned_department"]) if body.get("assigned_department") else None,
+            resolution_draft=body.get("resolution_draft"),
+            reasoning=body.get("reasoning"),
         )
     except ValueError as e:
         raise HTTPException(400, str(e))
