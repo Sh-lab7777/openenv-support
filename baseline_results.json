@@ -1,0 +1,329 @@
+{
+  "task_classify": {
+    "task": "task_classify",
+    "n_episodes": 20,
+    "mean_reward": 0.795,
+    "min_reward": 0.1,
+    "max_reward": 1.0,
+    "episodes": [
+      {
+        "ticket_id": "T013",
+        "steps": 1,
+        "reward": 0.1
+      },
+      {
+        "ticket_id": "T001",
+        "steps": 1,
+        "reward": 1.0
+      },
+      {
+        "ticket_id": "T006",
+        "steps": 1,
+        "reward": 1.0
+      },
+      {
+        "ticket_id": "T005",
+        "steps": 1,
+        "reward": 1.0
+      },
+      {
+        "ticket_id": "T015",
+        "steps": 1,
+        "reward": 1.0
+      },
+      {
+        "ticket_id": "T014",
+        "steps": 1,
+        "reward": 0.5
+      },
+      {
+        "ticket_id": "T018",
+        "steps": 1,
+        "reward": 0.1
+      },
+      {
+        "ticket_id": "T002",
+        "steps": 1,
+        "reward": 1.0
+      },
+      {
+        "ticket_id": "T009",
+        "steps": 1,
+        "reward": 1.0
+      },
+      {
+        "ticket_id": "T001",
+        "steps": 1,
+        "reward": 1.0
+      },
+      {
+        "ticket_id": "T005",
+        "steps": 1,
+        "reward": 1.0
+      },
+      {
+        "ticket_id": "T011",
+        "steps": 1,
+        "reward": 1.0
+      },
+      {
+        "ticket_id": "T001",
+        "steps": 1,
+        "reward": 1.0
+      },
+      {
+        "ticket_id": "T004",
+        "steps": 1,
+        "reward": 1.0
+      },
+      {
+        "ticket_id": "T013",
+        "steps": 1,
+        "reward": 0.1
+      },
+      {
+        "ticket_id": "T011",
+        "steps": 1,
+        "reward": 1.0
+      },
+      {
+        "ticket_id": "T005",
+        "steps": 1,
+        "reward": 1.0
+      },
+      {
+        "ticket_id": "T012",
+        "steps": 1,
+        "reward": 0.1
+      },
+      {
+        "ticket_id": "T017",
+        "steps": 1,
+        "reward": 1.0
+      },
+      {
+        "ticket_id": "T001",
+        "steps": 1,
+        "reward": 1.0
+      }
+    ]
+  },
+  "task_prioritize": {
+    "task": "task_prioritize",
+    "n_episodes": 20,
+    "mean_reward": 0.7625,
+    "min_reward": 0.55,
+    "max_reward": 1.0,
+    "episodes": [
+      {
+        "ticket_id": "T013",
+        "steps": 1,
+        "reward": 0.55
+      },
+      {
+        "ticket_id": "T001",
+        "steps": 1,
+        "reward": 0.75
+      },
+      {
+        "ticket_id": "T006",
+        "steps": 1,
+        "reward": 1.0
+      },
+      {
+        "ticket_id": "T005",
+        "steps": 1,
+        "reward": 0.55
+      },
+      {
+        "ticket_id": "T015",
+        "steps": 1,
+        "reward": 1.0
+      },
+      {
+        "ticket_id": "T014",
+        "steps": 1,
+        "reward": 1.0
+      },
+      {
+        "ticket_id": "T018",
+        "steps": 1,
+        "reward": 0.75
+      },
+      {
+        "ticket_id": "T002",
+        "steps": 1,
+        "reward": 1.0
+      },
+      {
+        "ticket_id": "T009",
+        "steps": 1,
+        "reward": 0.75
+      },
+      {
+        "ticket_id": "T001",
+        "steps": 1,
+        "reward": 0.75
+      },
+      {
+        "ticket_id": "T005",
+        "steps": 1,
+        "reward": 0.55
+      },
+      {
+        "ticket_id": "T011",
+        "steps": 1,
+        "reward": 0.75
+      },
+      {
+        "ticket_id": "T001",
+        "steps": 1,
+        "reward": 0.75
+      },
+      {
+        "ticket_id": "T004",
+        "steps": 1,
+        "reward": 0.75
+      },
+      {
+        "ticket_id": "T013",
+        "steps": 1,
+        "reward": 0.55
+      },
+      {
+        "ticket_id": "T011",
+        "steps": 1,
+        "reward": 0.75
+      },
+      {
+        "ticket_id": "T005",
+        "steps": 1,
+        "reward": 0.55
+      },
+      {
+        "ticket_id": "T012",
+        "steps": 1,
+        "reward": 0.75
+      },
+      {
+        "ticket_id": "T017",
+        "steps": 1,
+        "reward": 1.0
+      },
+      {
+        "ticket_id": "T001",
+        "steps": 1,
+        "reward": 0.75
+      }
+    ]
+  },
+  "task_resolve": {
+    "task": "task_resolve",
+    "n_episodes": 20,
+    "mean_reward": 1.0,
+    "min_reward": 1.0,
+    "max_reward": 1.0,
+    "episodes": [
+      {
+        "ticket_id": "T013",
+        "steps": 1,
+        "reward": 1.0
+      },
+      {
+        "ticket_id": "T001",
+        "steps": 1,
+        "reward": 1.0
+      },
+      {
+        "ticket_id": "T006",
+        "steps": 1,
+        "reward": 1.0
+      },
+      {
+        "ticket_id": "T005",
+        "steps": 1,
+        "reward": 1.0
+      },
+      {
+        "ticket_id": "T015",
+        "steps": 1,
+        "reward": 1.0
+      },
+      {
+        "ticket_id": "T014",
+        "steps": 1,
+        "reward": 1.0
+      },
+      {
+        "ticket_id": "T018",
+        "steps": 1,
+        "reward": 1.0
+      },
+      {
+        "ticket_id": "T002",
+        "steps": 1,
+        "reward": 1.0
+      },
+      {
+        "ticket_id": "T009",
+        "steps": 1,
+        "reward": 1.0
+      },
+      {
+        "ticket_id": "T001",
+        "steps": 1,
+        "reward": 1.0
+      },
+      {
+        "ticket_id": "T005",
+        "steps": 1,
+        "reward": 1.0
+      },
+      {
+        "ticket_id": "T011",
+        "steps": 1,
+        "reward": 1.0
+      },
+      {
+        "ticket_id": "T001",
+        "steps": 1,
+        "reward": 1.0
+      },
+      {
+        "ticket_id": "T004",
+        "steps": 1,
+        "reward": 1.0
+      },
+      {
+        "ticket_id": "T013",
+        "steps": 1,
+        "reward": 1.0
+      },
+      {
+        "ticket_id": "T011",
+        "steps": 1,
+        "reward": 1.0
+      },
+      {
+        "ticket_id": "T005",
+        "steps": 1,
+        "reward": 1.0
+      },
+      {
+        "ticket_id": "T012",
+        "steps": 1,
+        "reward": 1.0
+      },
+      {
+        "ticket_id": "T017",
+        "steps": 1,
+        "reward": 1.0
+      },
+      {
+        "ticket_id": "T001",
+        "steps": 1,
+        "reward": 1.0
+      }
+    ]
+  }
+}

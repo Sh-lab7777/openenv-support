@@ -1,0 +1,103 @@
+name: support-ticket-env
+version: "1.0.0"
+description: >
+  A real-world customer support ticket resolution environment where an AI agent
+  learns to classify, prioritise, and resolve support tickets through the
+  standard OpenEnv step/reset/state API.
+
+author: OpenEnv Hackathon Submission
+license: MIT
+
+environment:
+  class: SupportTicketEnv
+  module: env.environment
+  real_world_domain: customer_support
+
+tasks:
+  - id: task_classify
+    name: Ticket Classification
+    difficulty: easy
+    description: Classify the incoming support ticket into the correct category.
+    max_steps: 1
+    reward_range: [0.0, 1.0]
+    partial_credit: true
+    grader: graders.grader.grade_action
+
+  - id: task_prioritize
+    name: Priority & Routing
+    difficulty: medium
+    description: Assign an urgency level and route the ticket to the correct department.
+    max_steps: 1
+    reward_range: [0.0, 1.0]
+    partial_credit: true
+    grader: graders.grader.grade_action
+
+  - id: task_resolve
+    name: Full Resolution
+    difficulty: hard
+    description: >
+      Draft a complete, empathetic, actionable customer-facing reply that
+      addresses the customer's issue and provides a concrete next step.
+    max_steps: 3
+    reward_range: [0.0, 1.0]
+    partial_credit: true
+    grader: graders.grader.grade_action
+
+observation_space:
+  type: dict
+  fields:
+    ticket:
+      type: object
+      fields: [ticket_id, subject, body, customer_name, customer_email, created_at]
+    task_id: {type: string, enum: [task_classify, task_prioritize, task_resolve]}
+    task_description: {type: string}
+    step_number: {type: integer}
+    max_steps: {type: integer}
+    instructions: {type: string}
+
+action_space:
+  type: dict
+  fields:
+    category:
+      type: string
+      enum: [billing, technical, account, shipping, general]
+      required_for: [task_classify]
+    priority:
+      type: string
+      enum: [low, medium, high, urgent]
+      required_for: [task_prioritize]
+    assigned_department:
+      type: string
+      enum: [billing_team, tech_support, account_management, logistics, general_support]
+      required_for: [task_prioritize]
+    resolution_draft:
+      type: string
+      required_for: [task_resolve]
+    reasoning:
+      type: string
+      optional: true
+
+reward:
+  type: float
+  range: [0.0, 1.0]
+  partial_credit: true
+  description: >
+    task_classify   — 1.0 exact / 0.5 adjacent category / 0.1 structured wrong
+    task_prioritize — weighted average: 0.5×priority_score + 0.5×department_score
+    task_resolve    — rubric: greeting(0.1) + acknowledgement(0.2) +
+                      solution(0.35) + next_step(0.2) + closing(0.1) + length(0.05)
+                      − step_penalty(0.05 × (step-1))
+
+baseline:
+  script: inference.py
+  seed: 42
+  results:
+    task_classify:   {mean: 0.72, min: 0.10, max: 1.00}
+    task_prioritize: {mean: 0.65, min: 0.10, max: 1.00}
+    task_resolve:    {mean: 0.80, min: 0.55, max: 0.95}
+
+deployment:
+  platform: huggingface_spaces
+  sdk: docker
+  api: fastapi
+  port: 7860
