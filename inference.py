@@ -1,6 +1,6 @@
 """
 Baseline inference script — runs a rule-based agent across all 3 tasks
-and reports reproducible scores.
+and reports reproducible scores with required [START]/[STEP]/[END] blocks.
 
 Usage:
     python inference.py [--seed 42] [--tickets 20]
@@ -22,7 +22,6 @@ from env.ticket_bank import TICKET_BANK
 # ── Baseline agents (rule-based, no LLM) ─────────────────────────────────
 
 def baseline_classify(obs) -> TicketAction:
-    """Keyword-based category classifier."""
     body = (obs.ticket.subject + " " + obs.ticket.body).lower()
     if any(w in body for w in ["charge", "invoice", "refund", "payment", "billed", "billing", "overcharge", "receipt", "cancel"]):
         return TicketAction(category=Category.BILLING, reasoning="Billing keywords detected")
@@ -36,11 +35,9 @@ def baseline_classify(obs) -> TicketAction:
 
 
 def baseline_prioritize(obs) -> TicketAction:
-    """Urgency-signal priority + department assignment."""
     body = (obs.ticket.subject + " " + obs.ticket.body).lower()
     gt_cat = obs.ticket.metadata.get("gt_category", "general")
 
-    # Priority heuristic
     if any(w in body for w in ["urgent", "immediately", "asap", "critical", "locked out", "blocked", "emergency", "hours"]):
         priority = Priority.URGENT
     elif any(w in body for w in ["important", "please fix", "not working", "damaged", "wrong", "missing", "overcharge", "broken", "3 days", "weeks"]):
@@ -50,7 +47,6 @@ def baseline_prioritize(obs) -> TicketAction:
     else:
         priority = Priority.MEDIUM
 
-    # Department from category keyword
     cat_dept_map = {
         "billing":   Department.BILLING_TEAM,
         "technical": Department.TECH_SUPPORT,
@@ -59,13 +55,10 @@ def baseline_prioritize(obs) -> TicketAction:
         "general":   Department.GENERAL_SUPPORT,
     }
     dept = cat_dept_map.get(gt_cat, Department.GENERAL_SUPPORT)
-
-    return TicketAction(priority=priority, assigned_department=dept,
-                        reasoning="Keyword-based heuristic")
+    return TicketAction(priority=priority, assigned_department=dept, reasoning="Keyword-based heuristic")
 
 
 def baseline_resolve(obs) -> TicketAction:
-    """Simple template-based resolution draft."""
     t = obs.ticket
     name = t.customer_name.split()[0]
     draft = (
@@ -97,16 +90,20 @@ BASELINE_AGENTS = {
 def run_task(task_id: TaskID, seed: int, n_tickets: int) -> dict:
     env = SupportTicketEnv()
     episode_rewards: list[float] = []
-    records: list[dict] = []
 
     import random
     random.seed(seed)
     tickets = random.choices(TICKET_BANK, k=n_tickets)
 
-    for ticket in tickets:
+    task_name = task_id.value
+
+    for i, ticket in enumerate(tickets):
         obs = env.reset(task_id=task_id, ticket=ticket, seed=None)
         total_reward = 0.0
         steps = 0
+
+        # [START] block
+        print(f"[START] task={task_name} episode={i+1}", flush=True)
 
         while True:
             agent_fn = BASELINE_AGENTS[task_id]
@@ -114,24 +111,25 @@ def run_task(task_id: TaskID, seed: int, n_tickets: int) -> dict:
             result = env.step(action)
             total_reward += result.reward
             steps += 1
+
+            # [STEP] block
+            print(f"[STEP] step={steps} reward={result.reward:.4f} done={result.done}", flush=True)
+
             obs = result.observation
             if result.done:
                 break
 
         episode_rewards.append(total_reward)
-        records.append({
-            "ticket_id": ticket.ticket_id,
-            "steps": steps,
-            "reward": round(total_reward, 4),
-        })
+
+        # [END] block
+        print(f"[END] task={task_name} episode={i+1} score={round(total_reward, 4)} steps={steps}", flush=True)
 
     return {
-        "task": task_id.value,
+        "task": task_name,
         "n_episodes": n_tickets,
         "mean_reward": round(mean(episode_rewards), 4),
-        "min_reward": round(min(episode_rewards), 4),
-        "max_reward": round(max(episode_rewards), 4),
-        "episodes": records,
+        "min_reward":  round(min(episode_rewards), 4),
+        "max_reward":  round(max(episode_rewards), 4),
     }
 
 
@@ -149,28 +147,19 @@ def main():
         else [TaskID(args.task)]
     )
 
-    results = {}
-    print(f"\n{'='*60}")
-    print(f"  SupportTicketEnv — Baseline Inference  (seed={args.seed})")
-    print(f"{'='*60}")
+    all_results = {}
 
     for task_id in tasks:
-        print(f"\nRunning {task_id.value}...")
         result = run_task(task_id, seed=args.seed, n_tickets=args.tickets)
-        results[task_id.value] = result
-        print(f"  Mean reward : {result['mean_reward']:.4f}")
-        print(f"  Min / Max   : {result['min_reward']:.4f} / {result['max_reward']:.4f}")
+        all_results[task_id.value] = result
 
-    print(f"\n{'='*60}")
-    print("  Summary")
-    print(f"{'='*60}")
-    for task_name, r in results.items():
-        bar = "█" * int(r["mean_reward"] * 20)
-        print(f"  {task_name:<22} {r['mean_reward']:.4f}  {bar}")
+    # Summary
+    print("\n[SUMMARY]", flush=True)
+    for task_name, r in all_results.items():
+        print(f"[SUMMARY] task={task_name} mean_score={r['mean_reward']} min={r['min_reward']} max={r['max_reward']}", flush=True)
 
     with open("baseline_results.json", "w") as f:
-        json.dump(results, f, indent=2)
-    print("\n  Full results saved to baseline_results.json")
+        json.dump(all_results, f, indent=2)
 
 
 if __name__ == "__main__":
