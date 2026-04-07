@@ -23,14 +23,10 @@ from env.ticket_bank import TICKET_BANK
 # ── LLM client setup (uses injected env vars) ─────────────────────────────
 
 def get_llm_client():
-    """Initialize OpenAI-compatible client with proxy credentials."""
-    try:
-        from openai import OpenAI
-        api_base = os.environ.get("API_BASE_URL", "https://api.openai.com/v1")
-        api_key  = os.environ.get("API_KEY", "no-key")
-        return OpenAI(base_url=api_base, api_key=api_key)
-    except ImportError:
-        return None
+    from openai import OpenAI
+    api_base = os.environ["API_BASE_URL"]   
+    api_key  = os.environ["API_KEY"]
+    return OpenAI(base_url=api_base, api_key=api_key)
 
 
 def llm_call(client, prompt: str, system: str = "") -> str:
