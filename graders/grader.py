@@ -2,18 +2,10 @@
 Agent Graders — score an action for a given task, ticket, and step.
 Returns (reward: float, info: dict).
 
-Reward philosophy:
-  - Exact match on category/priority/dept → 1.0
-  - Adjacent match → 0.5 partial credit
-  - Wrong but structured → 0.1 (agent tried)
-  - Missing field → 0.0
-
-Task 3 (resolve) uses a rubric-based LLM-as-judge approach via heuristics
-when an LLM is unavailable, with a clear interface for swapping in a real model.
+All rewards are clipped to (0.01, 0.99) — strictly between 0 and 1.
 """
 
 from __future__ import annotations
-import re
 from typing import Any
 
 from env.models import (
@@ -23,7 +15,6 @@ from env.models import (
 
 # ── Adjacency maps for partial credit ────────────────────────────────────
 
-# Categories that are "one step away" from each other
 CATEGORY_ADJACENT: dict[Category, set[Category]] = {
     Category.BILLING:   {Category.ACCOUNT},
     Category.TECHNICAL: {Category.ACCOUNT},
@@ -32,7 +23,6 @@ CATEGORY_ADJACENT: dict[Category, set[Category]] = {
     Category.GENERAL:   {Category.SHIPPING},
 }
 
-# Priorities that are "one step away"
 PRIORITY_ADJACENT: dict[Priority, set[Priority]] = {
     Priority.LOW:    {Priority.MEDIUM},
     Priority.MEDIUM: {Priority.LOW, Priority.HIGH},
@@ -40,14 +30,18 @@ PRIORITY_ADJACENT: dict[Priority, set[Priority]] = {
     Priority.URGENT: {Priority.HIGH},
 }
 
-# Department → canonical category mapping
 DEPT_CATEGORY: dict[Department, Category] = {
-    Department.BILLING_TEAM:         Category.BILLING,
-    Department.TECH_SUPPORT:         Category.TECHNICAL,
-    Department.ACCOUNT_MANAGEMENT:   Category.ACCOUNT,
-    Department.LOGISTICS:            Category.SHIPPING,
-    Department.GENERAL_SUPPORT:      Category.GENERAL,
+    Department.BILLING_TEAM:       Category.BILLING,
+    Department.TECH_SUPPORT:       Category.TECHNICAL,
+    Department.ACCOUNT_MANAGEMENT: Category.ACCOUNT,
+    Department.LOGISTICS:          Category.SHIPPING,
+    Department.GENERAL_SUPPORT:    Category.GENERAL,
 }
+
+
+def _clip(reward: float) -> float:
+    """Clip reward to strictly (0, 1) — never 0.0 or 1.0."""
+    return round(max(0.01, min(0.99, reward)), 4)
 
 
 # ── Main dispatcher ───────────────────────────────────────────────────────
@@ -77,19 +71,19 @@ def _grade_classify(
     gt: Category = Category(ticket.metadata["gt_category"])
 
     if action.category is None:
-        return 0.0, {"reason": "No category provided", "gt": gt, "task_complete": True}
+        return _clip(0.05), {"reason": "No category provided", "gt": gt, "task_complete": True}
 
     if action.category == gt:
-        reward = 1.0
+        reward = 0.95
         reason = "Exact match"
     elif action.category in CATEGORY_ADJACENT.get(gt, set()):
-        reward = 0.5
+        reward = 0.55
         reason = "Adjacent category — partial credit"
     else:
-        reward = 0.1
+        reward = 0.15
         reason = "Wrong category"
 
-    return reward, {
+    return _clip(reward), {
         "reason": reason,
         "gt_category": gt,
         "predicted": action.category,
@@ -109,41 +103,38 @@ def _grade_prioritize(
     scores: dict[str, float] = {}
     reasons: dict[str, str]  = {}
 
-    # Score priority (weight 0.5)
     if action.priority is None:
-        scores["priority"] = 0.0
+        scores["priority"] = 0.05
         reasons["priority"] = "Missing"
     elif action.priority == gt_priority:
-        scores["priority"] = 1.0
+        scores["priority"] = 0.95
         reasons["priority"] = "Exact match"
     elif action.priority in PRIORITY_ADJACENT.get(gt_priority, set()):
-        scores["priority"] = 0.5
+        scores["priority"] = 0.55
         reasons["priority"] = "Adjacent priority"
     else:
-        scores["priority"] = 0.1
+        scores["priority"] = 0.15
         reasons["priority"] = "Wrong priority"
 
-    # Score department (weight 0.5)
     if action.assigned_department is None:
-        scores["department"] = 0.0
+        scores["department"] = 0.05
         reasons["department"] = "Missing"
     elif action.assigned_department == gt_department:
-        scores["department"] = 1.0
+        scores["department"] = 0.95
         reasons["department"] = "Exact match"
     else:
-        # Partial credit if dept maps to right category
         dept_cat = DEPT_CATEGORY.get(action.assigned_department)
         gt_cat   = Category(ticket.metadata["gt_category"])
         if dept_cat == gt_cat:
-            scores["department"] = 0.5
+            scores["department"] = 0.55
             reasons["department"] = "Correct category, different dept"
         else:
-            scores["department"] = 0.1
+            scores["department"] = 0.15
             reasons["department"] = "Wrong department"
 
     reward = 0.5 * scores["priority"] + 0.5 * scores["department"]
 
-    return reward, {
+    return _clip(reward), {
         "scores": scores,
         "reasons": reasons,
         "gt_priority": gt_priority,
@@ -155,12 +146,12 @@ def _grade_prioritize(
 # ── Task 3: Resolve ───────────────────────────────────────────────────────
 
 RUBRIC = {
-    "greeting":      (0.10, lambda draft, ticket: ticket.customer_name.split()[0].lower() in draft.lower()),
-    "acknowledgement":(0.20, lambda draft, ticket: any(w in draft.lower() for w in ["apologize","sorry","understand","inconvenience","frustrat"])),
-    "solution":      (0.35, lambda draft, ticket: len(draft.split()) >= 40),
-    "next_step":     (0.20, lambda draft, ticket: any(w in draft.lower() for w in ["will","refund","send","investigate","escalate","contact","follow","resolve","update","within"])),
-    "closing":       (0.10, lambda draft, ticket: any(w in draft.lower() for w in ["thank","sincerely","regards","best","help","feel free","reach out"])),
-    "length":        (0.05, lambda draft, ticket: len(draft.split()) >= 80),
+    "greeting":       (0.10, lambda d, t: t.customer_name.split()[0].lower() in d.lower()),
+    "acknowledgement":(0.20, lambda d, t: any(w in d.lower() for w in ["apologize","sorry","understand","inconvenience","frustrat"])),
+    "solution":       (0.30, lambda d, t: len(d.split()) >= 40),
+    "next_step":      (0.20, lambda d, t: any(w in d.lower() for w in ["will","refund","send","investigate","escalate","contact","resolve","update","within"])),
+    "closing":        (0.10, lambda d, t: any(w in d.lower() for w in ["thank","sincerely","regards","best","feel free","reach out"])),
+    "length":         (0.05, lambda d, t: len(d.split()) >= 80),
 }
 
 
@@ -172,7 +163,7 @@ def _grade_resolve(
     draft = (action.resolution_draft or "").strip()
 
     if not draft:
-        return 0.0, {"reason": "No resolution_draft provided", "task_complete": step >= 3}
+        return _clip(0.05), {"reason": "No resolution_draft provided", "task_complete": step >= 3}
 
     rubric_scores: dict[str, float] = {}
     total = 0.0
@@ -181,14 +172,11 @@ def _grade_resolve(
         rubric_scores[criterion] = weight if passed else 0.0
         total += rubric_scores[criterion]
 
-    # Bonus: reward improvement across steps (handled externally via cumulative)
-    # Small step penalty to encourage concise completion
-    step_penalty = max(0, (step - 1) * 0.05)
-    reward = max(0.0, round(total - step_penalty, 3))
+    step_penalty = max(0, (step - 1) * 0.03)
+    reward = max(0.05, round(total - step_penalty, 3))
+    task_complete = reward >= 0.80 or step >= 3
 
-    task_complete = reward >= 0.85 or step >= 3
-
-    return reward, {
+    return _clip(reward), {
         "rubric_scores": rubric_scores,
         "total_before_penalty": round(total, 3),
         "step_penalty": step_penalty,
